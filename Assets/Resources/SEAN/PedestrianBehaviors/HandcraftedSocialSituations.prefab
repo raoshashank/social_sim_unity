@@ -6240,12 +6240,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   SPAWN_HEIGHT: 0
   WAYPOINT_DIST: 1.5
-  agents: []
-  groups: []
+  agents:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  groups:
+  - {fileID: 0}
   agentPrefab: {fileID: 1779652455186312154, guid: e849054b62b8b8fd7981bfe9785f2a5f,
     type: 3}
   openGroupLocation:
-    position: {x: 0, y: 0, z: 0}
+    position: {x: 1, y: 0, z: 1}
     rotation: {x: 0, y: 0, z: 0, w: 1}
 --- !u!114 &4380558274468511818
 MonoBehaviour:

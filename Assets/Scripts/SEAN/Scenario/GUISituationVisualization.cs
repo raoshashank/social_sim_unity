@@ -35,7 +35,8 @@ namespace SEAN.Scenario
                 situations.crossPath.val,
                 situations.downPath.val,
                 situations.joinGroup.val,
-                situations.leaveGroup.val
+                situations.leaveGroup.val,
+                situations.customScenario.val
             );
             GUI.Label(rect, text, style);
         }

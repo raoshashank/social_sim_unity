@@ -23,6 +23,7 @@ namespace SEAN.Scenario
         public static Situation JoinGroup { get { return new Situation("join_group", 2); } }
         public static Situation LeaveGroup { get { return new Situation("leave_group", 3); } }
         public static Situation DownPath { get { return new Situation("down_path", 4); } }
+        public static Situation CustomScenario { get { return new Situation("custom_scenario", 5); } }
 
         public static implicit operator bool(Situation s) => s.val == 1.0f;
 

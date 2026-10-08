@@ -15,6 +15,7 @@ namespace SEAN.Scenario.PedestrianBehavior
         LeaveGroup,
         DownPath,
         CrossPath,
+        CustomScenario
     }
 
     public abstract class Base : MonoBehaviour

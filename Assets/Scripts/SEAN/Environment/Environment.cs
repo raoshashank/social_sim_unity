@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2021, Members of Yale Interactive Machines Group, Yale University,
+// Copyright (c) 2021, Members of Yale Interactive Machines Group, Yale University,
 // Nathan Tsoi
 // All rights reserved.
 // This source code is licensed under the BSD-style license found in the
@@ -13,7 +13,18 @@ namespace SEAN.Environment
     {
         public string name { get; private set; }
 
-        public GameObject environment { get { return gameObject.transform.GetChild(0).gameObject; } }
+        public GameObject environment
+        {
+            get
+            {
+                foreach (Transform child in gameObject.transform)
+                {
+                    if (child.name != "PedestrianControl")
+                        return child.gameObject;
+                }
+                return gameObject.transform.GetChild(0).gameObject;
+            }
+        }
 
         public void Start()
         {
@@ -25,9 +36,10 @@ namespace SEAN.Environment
         {
             get
             {
-                GameObject gameObject = environment.transform.Find("Cameras/TopViewCamera").gameObject;
-                gameObject.tag = "TopViewCamera";
-                return gameObject.GetComponent<Camera>();
+                Transform t = environment.transform.Find("Cameras/TopViewCamera");
+                if (t == null) { return null; }
+                t.gameObject.tag = "TopViewCamera";
+                return t.gameObject.GetComponent<Camera>();
             }
         }
     }

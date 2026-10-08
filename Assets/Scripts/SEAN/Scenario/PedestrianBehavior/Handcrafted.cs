@@ -220,7 +220,7 @@ namespace SEAN.Scenario.PedestrianBehavior
                 {
                     return new Trajectory.TrackedAgent[0];
                 }
-                return agentManager.agents.ToArray();
+                return agentManager.agents.Where(a => a != null).ToArray();
             }
         }
     }

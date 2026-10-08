@@ -19,10 +19,12 @@ namespace SEAN.Scenario.Agents
 
         public GameObject agentPrefab;
 
+        public int numWalker1Waypoints = 2;
+
         private PedestrianBehavior.SocialSituation current = PedestrianBehavior.SocialSituation.Empty;
         private GameObject agentsGO;
         private List<Pose> spawnLocations;
-        private Dictionary<IVI.INavigable, List<Pose>> agentGoals;
+        private Dictionary<IVI.INavigable, List<Pose>> agentGoals = new Dictionary<IVI.INavigable, List<Pose>>();
 
         public Pose openGroupLocation = Pose.identity;
 
@@ -42,18 +44,25 @@ namespace SEAN.Scenario.Agents
 
         void Update()
         {
-            // no need to plan if we only have static groups
-            if (current == PedestrianBehavior.SocialSituation.DownPath || current == PedestrianBehavior.SocialSituation.CrossPath)
+            if (current == PedestrianBehavior.SocialSituation.DownPath || current == PedestrianBehavior.SocialSituation.CrossPath || current == PedestrianBehavior.SocialSituation.CustomScenario)
             {
                 foreach (var agent in agents)
                 {
-                    if (agent.CloseEnough())
+                    if (agent == null) { continue; }
+                    if (agentGoals.ContainsKey(agent) && agentGoals[agent].Count > 1)
                     {
-                        // Set the next goal
-                        agent.InitDest(agentGoals[agent][1].position);
-                        Pose currentGoal = agentGoals[agent][0];
-                        agentGoals[agent].RemoveAt(0);
-                        agentGoals[agent].Add(currentGoal);
+                        Vector3 agentPos = agent.transform.position;
+                        agentPos.y = 0;
+                        Vector3 goalPos = agentGoals[agent][0].position;
+                        goalPos.y = 0;
+                        float dist = Vector3.Distance(agentPos, goalPos);
+                        if (agent.CloseEnough() || dist <= WAYPOINT_DIST)
+                        {
+                            agent.InitDest(agentGoals[agent][1].position);
+                            Pose currentGoal = agentGoals[agent][0];
+                            agentGoals[agent].RemoveAt(0);
+                            agentGoals[agent].Add(currentGoal);
+                        }
                     }
                 }
             }
@@ -90,15 +99,15 @@ namespace SEAN.Scenario.Agents
 
         void Clear()
         {
-            if (!agentsGO) { return; }
             agents = new List<IVI.INavigable>();
             groups = new List<Trajectory.TrackedGroup>();
+            agentGoals.Clear();
+            openGroupLocation = Pose.identity;
+            if (!agentsGO) { return; }
             foreach (Transform child in agentsGO.transform)
             {
                 GameObject.Destroy(child.gameObject);
             }
-            openGroupLocation = Pose.identity;
-            agentGoals.Clear();
         }
 
         IVI.INavigable SpawnAgent(string name, Pose pose)
@@ -113,6 +122,26 @@ namespace SEAN.Scenario.Agents
             return agent;
         }
 
+        void SpawnFixedGroup(Pose groupCenter, int numMembers)
+        {
+            float radius = 0.8f; // The distance each person stands from the center (standard conversational space)
+            float angleStep = 360f / numMembers;
+            for (int i = 0; i < numMembers; i++)
+            {
+                // 1. Calculate where they stand on the circle
+                float angleRad = (i * angleStep) * Mathf.Deg2Rad;
+                Vector3 offset = new Vector3(Mathf.Sin(angleRad) * radius, 0, Mathf.Cos(angleRad) * radius);
+                Vector3 memberPos = groupCenter.position + offset;
+
+                // 2. Make them rotate to face the center of the group
+                Vector3 faceCenter = (groupCenter.position - memberPos).normalized;
+                Quaternion rotation = Quaternion.LookRotation(faceCenter);
+
+                // 3. Spawn them!
+                Pose pose = new Pose(memberPos, rotation);
+                SpawnAgent("CustomGroupAgent_" + i, pose);
+            }
+        }
         void SpawnGroup(Pose groupCenter)
         {
             IVI.GroupDataLoader.GroupData group = IVI.GroupDataLoader.groupData[Random.Range(0, IVI.GroupDataLoader.groupData.Count)];
@@ -139,35 +168,79 @@ namespace SEAN.Scenario.Agents
         }
 
         void SpawnAgents()
+{
+    if (current == PedestrianBehavior.SocialSituation.Empty)
+    {
+        return;
+    }
+    if (current == PedestrianBehavior.SocialSituation.CustomScenario)
+    {
+        List<Pose> dynamicWaypoints = new List<Pose>();
+        for (int i = 0; i < spawnLocations.Count; i++)
         {
-            if (current == PedestrianBehavior.SocialSituation.Empty)
+            if (i == 0) 
             {
-                return;
+                SpawnFixedGroup(spawnLocations[i],3);
             }
-            if (current == PedestrianBehavior.SocialSituation.DownPath || current == PedestrianBehavior.SocialSituation.CrossPath)
+            else
             {
-                for (int i = 0; i < spawnLocations.Count; i++)
-                {
-                    Pose spawnPose = spawnLocations[i];
-                    List<Pose> trajectoryPoints = new List<Pose>();
-                    for (int j = 0; j < spawnLocations.Count; j++)
-                    {
-                        trajectoryPoints.Add(spawnLocations[(i + j) % spawnLocations.Count]);
-                    }
-                    IVI.INavigable agent = SpawnAgent("Agent_" + i++, spawnPose);
-                    agentGoals.Add(agent, trajectoryPoints);
-                    agent.InitDest(spawnPose.position);
-                }
-                return;
-            }
-            if (current == PedestrianBehavior.SocialSituation.JoinGroup || current == PedestrianBehavior.SocialSituation.LeaveGroup)
-            {
-                foreach (Pose pose in spawnLocations)
-                {
-                    SpawnGroup(pose);
-                }
-                return;
+                dynamicWaypoints.Add(spawnLocations[i]);
             }
         }
+        List<Pose> walker2WPs = dynamicWaypoints.Count > numWalker1Waypoints
+            ? dynamicWaypoints.GetRange(numWalker1Waypoints, dynamicWaypoints.Count - numWalker1Waypoints)
+            : new List<Pose>();
+        if (dynamicWaypoints.Count > numWalker1Waypoints)
+            dynamicWaypoints.RemoveRange(numWalker1Waypoints, dynamicWaypoints.Count - numWalker1Waypoints);
+
+        if (dynamicWaypoints.Count > 1) // Ensure we have at least a start and an end point!
+        {
+            IVI.INavigable agent = SpawnAgent("Agent_Dynamic", dynamicWaypoints[0]);
+            Pose startPose = dynamicWaypoints[0];
+            dynamicWaypoints.RemoveAt(0);
+            dynamicWaypoints.Add(startPose);
+            agentGoals.Add(agent, dynamicWaypoints);
+            agent.InitDest(dynamicWaypoints[0].position);
+        }
+        else if (dynamicWaypoints.Count == 1)
+        {
+            Debug.LogWarning("You only have 1 dynamic waypoint! Add another marker to the folder for the walker to target.");
+        }
+
+        if (walker2WPs.Count > 1)
+        {
+            IVI.INavigable agent2 = SpawnAgent("Agent_Dynamic2", walker2WPs[0]);
+            Pose startPose2 = walker2WPs[0];
+            walker2WPs.RemoveAt(0);
+            walker2WPs.Add(startPose2);
+            agentGoals.Add(agent2, walker2WPs);
+            agent2.InitDest(walker2WPs[0].position);
+        }
+        return;
+    }
+    if (current == PedestrianBehavior.SocialSituation.CustomScenario)
+    {
+        List<Pose> dynamicWaypoints = new List<Pose>();
+        for (int i = 0; i < spawnLocations.Count; i++)
+        {
+            if (i == 0) 
+            {
+                SpawnFixedGroup(spawnLocations[i], 3);
+            }
+            else
+            {
+                dynamicWaypoints.Add(spawnLocations[i]);
+            }
+        }
+        if (dynamicWaypoints.Count > 0)
+        {
+            List<Pose> trajectoryPoints = new List<Pose>(dynamicWaypoints);
+            IVI.INavigable agent = SpawnAgent("Agent_Dynamic", trajectoryPoints[0]);
+            agentGoals.Add(agent, trajectoryPoints);
+            agent.InitDest(trajectoryPoints[0].position);
+        }
+        return;
+    }
+}
     }
 }

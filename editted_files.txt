@@ -1,0 +1,15 @@
+Initial Generation: 
+1. Environment.cs: 22
+2. GUISituationVisualization.cs: +3
+3. Situation.cs: +1
+4. Scripts/SEAN/Scenario/Agents/Handcrafted.cs: 93
+5. SituationClassifier.cs: 2
+7. Base.cs: 1
+8. Scripts/SEAN/Scenario/PedestrianBehavior/Handcrafted.cs: 2
+--------------------------------------------
+124 LOC, 8 files
+--------------------------------------------
+
+Modification: 
+
+1. Scripts/SEAN/Scenario/Agents/Handcrafted.cs: 141 (-93 = )

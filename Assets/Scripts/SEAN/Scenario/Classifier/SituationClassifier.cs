@@ -23,6 +23,7 @@ namespace SEAN.Scenario.Classifier
         public Scenario.Situation crossPath { get; private set; }
         public Scenario.Situation leaveGroup { get; private set; }
         public Scenario.Situation joinGroup { get; private set; }
+        public Scenario.Situation customScenario { get; private set; }
 
         public float lastUpdateTime { get; protected set; }
 
@@ -33,6 +34,7 @@ namespace SEAN.Scenario.Classifier
             crossPath = Scenario.Situation.CrossPath;
             leaveGroup = Scenario.Situation.LeaveGroup;
             joinGroup = Scenario.Situation.JoinGroup;
+            customScenario = Scenario.Situation.CustomScenario;
 
             lastUpdateTime = 0f;
             ros = ROSConnection.instance;
